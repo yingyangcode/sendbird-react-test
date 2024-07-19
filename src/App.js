@@ -67,10 +67,23 @@ async function createTicket(title, userNickname, groupKey='') {
       });
   });
 }
+/**
+ * 
+ * If a limit for messages is set to 2:
+ *  - It shows me 1 message and not 2
+ *  - The limit number is not reflected in the number of messages that come in from onApiResult
+ * 
+ * [Questions]
+ * 1. Why do I not get 2 messages when I set the limit to 2 ?
+ * 
+ */
 
+// const DEFAULT_MESSAGE_LIMIT = 2
 async function loadMessages(channel) {
   return new Promise((resolve, reject) => {
-    const messageCollection = channel.createMessageCollection({});
+    const messageCollection = channel.createMessageCollection({
+      // limit: DEFAULT_MESSAGE_LIMIT
+    });
 
     messageCollection.initialize(MessageCollectionInitPolicy.CACHE_AND_REPLACE_BY_API)
       .onApiResult((err, apiMessages) => {
@@ -122,6 +135,31 @@ function App() {
     if (currentTicket) {
       const handler = new GroupChannelHandler();
       handler.onMessageReceived = async (channel, message) => {
+        /**
+         * When a new ticket is created and a message is sent to its channel:
+         *    - We receive a message back from the server here with:
+         *      - message.data.ticket.status === ASSIGNED
+         *      - message.data.ticket.recentAssignment.agent == {
+         *          id: 'xxx', 
+         *          displayName: 'xxx', 
+         *          role: 'xxx', 
+         *          status: 'xxx', 
+         *          connection: 'xxx', 
+         *          email: 'xxx', 
+         *          photoThumbnailUrl: 'xxx', 
+         *          tier: 'xxx', 
+         *          phoneNumber: 'xxx'
+         *      }
+         *   - When we try to get the ticket from this message's channelUrl using 
+         *     getTicketByChannelUrl(message.channelUrl), we get:
+         *      - ticket.status === INITIALIZED
+         *      - ticket.agent == null
+         * 
+         * [Questions]
+         * 1. Why are these two different even after an agent has been assigned to the ticket?
+         * 2. I want to display the status and agent information from the updated ticket's data. 
+         *    How can I access the ticket with its updated agent and status information when an agent is assigned to a ticket?
+         */
         const messageTicket = await getTicketByChannelUrl(message.channelUrl);
         console.log(`[handleSelectTicket][onMessageReceived][message]>> ${JSON.stringify(message, null, 2)}`);
         console.log(`[handleSelectTicket][onMessageReceived][messageTicket]>> ${JSON.stringify(messageTicket, null, 2)}`);
